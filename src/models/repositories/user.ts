@@ -138,8 +138,9 @@ export class UserRepository extends Repository<User> {
 				isSuspended: user.isSuspended || falsy,
 				description: profile!.description,
 				fields: profile!.fields,
-				followersCount: user.followersCount,
-				followingCount: user.followingCount,
+				//meがないなら-1
+				followersCount:  me ? user.followersCount : -1,
+				followingCount:  me ? user.followingCount : -1,
 				notesCount: user.notesCount,
 				pinnedNoteIds: pins.map(pin => pin.noteId),
 				pinnedNotes: Notes.packMany(pins.map(pin => pin.noteId), meId, {
