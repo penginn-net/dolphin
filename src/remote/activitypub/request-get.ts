@@ -28,19 +28,24 @@ export default async (user: ILocalUser, url: string) => {
 				'User-Agent': config.userAgent,
 				'Accept': 'application/activity+json, application/ld+json',
 			}
-		}, res => {
-			if (res.statusCode! >= 400) {
-				reject(res);
-				res.resume;
-				return;
-			}
-			let data = '';
-			res.on('data', (chunk) => { data += chunk; });
-			res.on('end', () =>{
-				resolve(JSON.parse(res.responseText));
-			})
-		});
-
+}, res => {
+    if (res.statusCode! >= 400) {
+        res.resume();              // ← () を付ける
+        reject(res);
+        return;
+    }
+    res.setEncoding('utf8');
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+        try {
+            resolve(JSON.parse(data));   // ← res.responseText を data に
+        } catch (e) {
+            reject(e);
+        }
+    });
+    res.on('error', reject);
+});
 		sign(req, {
 			authorizationHeaderName: 'Signature',
 			key: keypair.privateKey,
