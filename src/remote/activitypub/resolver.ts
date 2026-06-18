@@ -1,5 +1,6 @@
 import { getJson } from '../../misc/fetch';
 import { IObject, isCollectionOrOrderedCollection, ICollection, IOrderedCollection } from './type';
+import { ILocalUser } from "../../models/entities/user";
 
 export default class Resolver {
 	private history: Set<string>;
@@ -26,7 +27,7 @@ export default class Resolver {
 		}
 	}
 
-	public async resolve(value: string | IObject): Promise<IObject> {
+	public async resolve(value: string | IObject, user?: ILocalUser): Promise<IObject> {
 		if (value == null) {
 			throw new Error('resolvee is null (or undefined)');
 		}
@@ -45,7 +46,7 @@ export default class Resolver {
 
 		this.history.add(value);
 
-		const object = await getJson(value, 'application/activity+json, application/ld+json');
+		const object = await getJson(value, 'application/activity+json, application/ld+json',undefined, undefined, user);
 
 		if (object == null || (
 			Array.isArray(object['@context']) ?
