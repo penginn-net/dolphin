@@ -11,10 +11,10 @@ import {Users} from "../models";
 
 export async function getJson(url: string, accept = 'application/json, */*', timeout = 10000, headers?: HeadersInit, user?: ILocalUser) {
 	if (user) {
-		const res = await requestGet(user, url);
+		return await requestGet(user, url);
 	} else {
 		const u = await Users.find({
-			isRoot: true,
+			isAdmin: true,
 		});
 		return await requestGet(u, url);
 	}

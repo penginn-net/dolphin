@@ -15,7 +15,7 @@ export default async (user: ILocalUser, url: string) => {
 		userId: user.id
 	}).then(ensure);
 
-	await new Promise((resolve, reject) => {
+	return await new Promise((resolve, reject) => {
 		const req = https.request({
 			agent: getAgentByUrl(new URL(`https://example.net`)),
 			protocol,
