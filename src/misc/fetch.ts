@@ -5,26 +5,19 @@ import fetch, { HeadersInit } from 'node-fetch';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import config from '../config';
+import {ILocalUser} from "../models/entities/user";
+import requestGet from "../remote/activitypub/request-get";
+import {Users} from "../models";
 
-export async function getJson(url: string, accept = 'application/json, */*', timeout = 10000, headers?: HeadersInit) {
-	const res = await fetch(url, {
-		headers: Object.assign({
-			'User-Agent': config.userAgent,
-			Accept: accept
-		}, headers || {}),
-		timeout,
-		agent: getAgentByUrl,
-	});
-
-	if (!res.ok) {
-		throw {
-			name: `StatusError`,
-			statusCode: res.status,
-			message: `${res.status} ${res.statusText}`,
-		};
+export async function getJson(url: string, accept = 'application/json, */*', timeout = 10000, headers?: HeadersInit, user?: ILocalUser) {
+	if (user) {
+		const res = await requestGet(user, url);
+	} else {
+		const u = await Users.find({
+			isRoot: true,
+		});
+		return await requestGet(u, url);
 	}
-
-	return await res.json();
 }
 
 /**

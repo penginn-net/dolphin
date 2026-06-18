@@ -8,7 +8,7 @@ import { ApiError } from '../../error';
 import { extractDbHost } from '../../../../misc/convert-host';
 import { Users, Notes } from '../../../../models';
 import { Note } from '../../../../models/entities/note';
-import { User } from '../../../../models/entities/user';
+import { ILocalUser, User} from '../../../../models/entities/user';
 import { fetchMeta } from '../../../../misc/fetch-meta';
 import { validActor, validPost } from '../../../../remote/activitypub/type';
 
@@ -39,8 +39,8 @@ export const meta = {
 	}
 };
 
-export default define(meta, async (ps) => {
-	const object = await fetchAny(ps.uri);
+export default define(meta, async (ps, user) => {
+	const object = await fetchAny(ps.uri, user);
 	if (object) {
 		return object;
 	} else {
@@ -51,7 +51,7 @@ export default define(meta, async (ps) => {
 /***
  * URIからUserかNoteを解決する
  */
-async function fetchAny(uri: string) {
+async function fetchAny(uri: string, user: ILocalUser) {
 	// URIがこのサーバーを指しているなら、ローカルユーザーIDとしてDBからフェッチ
 	if (uri.startsWith(config.url + '/')) {
 		const parts = uri.split('/');
@@ -96,7 +96,7 @@ async function fetchAny(uri: string) {
 
 	// リモートから一旦オブジェクトフェッチ
 	const resolver = new Resolver();
-	const object = await resolver.resolve(uri) as any;
+	const object = await resolver.resolve(uri, user) as any;
 
 	// /@user のような正規id以外で取得できるURIが指定されていた場合、ここで初めて正規URIが確定する
 	// これはDBに存在する可能性があるため再度DB検索
