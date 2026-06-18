@@ -26,21 +26,26 @@ export default async (user: ILocalUser, url: string) => {
 			timeout,
 			headers: {
 				'User-Agent': config.userAgent,
-				'Content-Type': 'application/activity+json',
+				'Accept': 'application/activity+json, application/ld+json',
 			}
 		}, res => {
 			if (res.statusCode! >= 400) {
 				reject(res);
-			} else {
-				resolve();
+				res.resume;
+				return;
 			}
+			let data = '';
+			res.on('data', (chunk) => { data += chunk; });
+			res.on('end', () =>{
+				resolve(JSON.parse(res.responseText));
+			})
 		});
 
 		sign(req, {
 			authorizationHeaderName: 'Signature',
 			key: keypair.privateKey,
 			keyId: `${config.url}/users/${user.id}#main-key`,
-			headers: ['(request-target)', 'date', 'host']
+			headers: ['(request-target)', 'date', 'host', 'accept']
 		});
 
 		req.on('timeout', () => req.abort());
@@ -49,11 +54,6 @@ export default async (user: ILocalUser, url: string) => {
 			if (req.aborted) reject('timeout');
 			reject(e);
 		});
-
-		let data = '';
-		req.on('data', (chunk) => { data += chunk; });
-		req.on('end', () =>{
-			resolve(JSON.parse(req.responseText));
-		})
+		req.end();
 	});
 };

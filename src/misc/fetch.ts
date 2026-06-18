@@ -13,7 +13,7 @@ export async function getJson(url: string, accept = 'application/json, */*', tim
 	if (user) {
 		return await requestGet(user, url);
 	} else {
-		const u = await Users.find({
+		const u = await Users.findOne({
 			isAdmin: true,
 		});
 		return await requestGet(u, url);
