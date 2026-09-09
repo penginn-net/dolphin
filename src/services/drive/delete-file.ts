@@ -3,7 +3,7 @@ import { InternalStorage } from './internal-storage';
 import { DriveFiles, Instances, Notes } from '../../models';
 import { driveChart, perUserDriveChart, instanceChart } from '../chart';
 import { createDeleteObjectStorageFileJob } from '../../queue';
-import { getS3 } from './s3';
+import { getColdS3, getColdStorageConfig, getS3 } from './s3';
 import config from '../../config';
 
 export async function deleteFile(file: DriveFile, isExpired = false) {
@@ -14,10 +14,10 @@ export async function deleteFile(file: DriveFile, isExpired = false) {
 			InternalStorage.del(file.thumbnailAccessKey!);
 		}
 	} else if (!file.isLink) {
-		createDeleteObjectStorageFileJob(file.accessKey!);
+		createDeleteObjectStorageFileJob(file.accessKey!, file.storedInColdStorage);
 
 		if (file.thumbnailUrl) {
-			createDeleteObjectStorageFileJob(file.thumbnailAccessKey!);
+			createDeleteObjectStorageFileJob(file.thumbnailAccessKey!, file.storedInColdStorage);
 		}
 	}
 
@@ -34,10 +34,10 @@ export async function deleteFileSync(file: DriveFile, isExpired = false) {
 	} else if (!file.isLink) {
 		const promises = [];
 
-		promises.push(deleteObjectStorageFile(file.accessKey!));
+		promises.push(deleteObjectStorageFile(file.accessKey!, file.storedInColdStorage));
 
 		if (file.thumbnailUrl) {
-			promises.push(deleteObjectStorageFile(file.thumbnailAccessKey!));
+			promises.push(deleteObjectStorageFile(file.thumbnailAccessKey!, file.storedInColdStorage));
 		}
 
 		await Promise.all(promises);
@@ -74,11 +74,12 @@ function postProcess(file: DriveFile, isExpired = false) {
 	}
 }
 
-export async function deleteObjectStorageFile(key: string) {
-	const s3 = getS3();
+export async function deleteObjectStorageFile(key: string, cold = false) {
+	const s3 = cold ? getColdS3() : getS3();
+	const bucket = cold ? getColdStorageConfig().bucket! : config.drive.bucket!;
 
 	await s3.deleteObject({
-		Bucket: config.drive.bucket!,
+		Bucket: bucket,
 		Key: key
 	}).promise();
 }
