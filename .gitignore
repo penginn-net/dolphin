@@ -11,6 +11,7 @@
 # config
 /.config/*
 !/.config/example.yml
+!/.config/test_example.yml
 !/.config/docker_example.env
 
 # dolphin

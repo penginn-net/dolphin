@@ -1,0 +1,38 @@
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Dolphin test configuration
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# `yarn test` でDBを使うテストを実行するための設定。
+# このファイルを .config/test.yml にコピーして使う。
+#
+#   cp .config/test_example.yml .config/test.yml
+#
+# ここで指定したDBのスキーマはテストの度に作り直される。
+# 本番のDBを指定しないこと。
+
+url: https://test.example.com/
+port: 3000
+
+db:
+  host: localhost
+  port: 5432
+  db: dolphin_test
+  user: dolphin
+  pass: dolphin
+  # クエリキャッシュを無効にする (テストにRedisを要求しないため)
+  disableCache: true
+
+redis:
+  host: localhost
+  port: 6379
+  pass: ''
+
+drive:
+  storage: 'fs'
+  coldStorage:
+    bucket: cold-bucket
+    prefix: files
+    baseUrl: https://cold.example.com
+    olderThanDays: 90
+
+id: 'ulid'

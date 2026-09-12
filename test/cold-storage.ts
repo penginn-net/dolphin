@@ -3,27 +3,12 @@
  *
  * `yarn test` で実行する。
  * DBを使うテストは .config/test.yml が無ければスキップされる。
- * 実行するには PostgreSQL と Redis を用意した上で、以下のような
- * .config/test.yml を置く (テスト用DBのスキーマは毎回作り直される):
+ * 実行するには PostgreSQL を用意した上で、設定ファイルを置く:
  *
- *   url: https://test.example.com/
- *   port: 3000
- *   db:
- *     host: localhost
- *     port: 5432
- *     db: dolphin_test
- *     user: dolphin
- *     pass: ''
- *     disableCache: true
- *   redis:
- *     host: localhost
- *     port: 6379
- *     pass: ''
- *   drive:
- *     storage: 'fs'
- *     coldStorage:
- *       bucket: cold-bucket
- *   id: 'ulid'
+ *   cp .config/test_example.yml .config/test.yml
+ *
+ * 指定したDBのスキーマはテストの度に作り直されるので、
+ * 本番のDBを指定しないこと。
  */
 
 import * as assert from 'assert';
