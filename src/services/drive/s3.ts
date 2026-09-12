@@ -2,6 +2,7 @@ import * as S3 from 'aws-sdk/clients/s3';
 import config from '../../config';
 import { ColdStorage, ObjectStorage } from '../../config/types';
 import { getAgentByUrl } from '../../misc/fetch';
+import { isColdStorageAvailable } from './cold-storage-util';
 
 function createS3(conf: ObjectStorage) {
 	const u = conf.endpoint != null
@@ -29,24 +30,15 @@ export function getS3() {
  * 退避先(コールドストレージ)が利用可能なように設定されているか
  */
 export function isColdStorageConfigured(): boolean {
-	const conf = config.drive.coldStorage;
-	return conf != null && conf.bucket != null;
+	return isColdStorageAvailable(config.drive.coldStorage);
 }
 
 export function getColdStorageConfig(): ColdStorage {
 	const conf = config.drive.coldStorage;
-	if (conf == null || conf.bucket == null) throw new Error('cold storage is not configured');
+	if (!isColdStorageAvailable(conf)) throw new Error('cold storage is not configured');
 	return conf;
 }
 
 export function getColdS3() {
 	return createS3(getColdStorageConfig());
-}
-
-/**
- * オブジェクトストレージの公開URLのベースを得る
- */
-export function getBaseUrl(conf: ObjectStorage): string {
-	return conf.baseUrl
-		|| `${ conf.useSSL ? 'https' : 'http' }://${ conf.endpoint }${ conf.port ? `:${conf.port}` : '' }/${ conf.bucket }`;
 }

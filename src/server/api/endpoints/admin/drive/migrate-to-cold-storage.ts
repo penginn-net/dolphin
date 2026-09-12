@@ -1,7 +1,7 @@
 import define from '../../../define';
 import { ApiError } from '../../../error';
 import { createMigrateToColdStorageJob } from '../../../../../queue';
-import { isColdStorageConfigured } from '../../../../../services/drive/cold-storage';
+import { isColdStorageConfigured } from '../../../../../services/drive/s3';
 
 export const meta = {
 	desc: {

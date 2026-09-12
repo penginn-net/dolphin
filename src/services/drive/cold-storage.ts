@@ -6,52 +6,13 @@ import config from '../../config';
 import { DriveFile } from '../../models/entities/drive-file';
 import { DriveFiles } from '../../models';
 import { contentDisposition } from '../../misc/content-disposition';
-import { genId } from '../../misc/gen-id';
 import { createDeleteObjectStorageFileJob } from '../../queue';
 import { InternalStorage } from './internal-storage';
 import { driveLogger } from './logger';
-import { getBaseUrl, getColdS3, getColdStorageConfig, getS3, isColdStorageConfigured } from './s3';
+import { getColdS3, getColdStorageConfig, getS3 } from './s3';
+import { detectExt, getBaseUrl, getKeyPrefix, normalizeContentType } from './cold-storage-util';
 
 const logger = driveLogger.createSubLogger('cold-storage', 'cyan');
-
-const DEFAULT_OLDER_THAN_DAYS = 90;
-
-export { isColdStorageConfigured };
-
-/**
- * 退避対象とみなすまでの日数
- */
-export function getColdStorageThreshold(): Date {
-	const days = getColdStorageConfig().olderThanDays ?? DEFAULT_OLDER_THAN_DAYS;
-	return new Date(Date.now() - (days * 24 * 60 * 60 * 1000));
-}
-
-/**
- * 退避対象のファイルを絞り込むクエリを作る
- *
- * 以下は退避しない:
- * - リンク(実体を持たない)ファイル
- * - 既に退避済みのファイル
- * - アイコン(アバター)・バナーとして使われているファイル
- * - カスタム絵文字として使われているファイル
- * - 最近の投稿に添付されている(=まだアクセスされうる)ファイル
- */
-export function createColdStorageTargetQuery(threshold: Date) {
-	// ID は時系列順なので、閾値以降の投稿だけを走査すれば済む
-	const thresholdId = genId(threshold);
-
-	return DriveFiles.createQueryBuilder('file')
-		.where('file.createdAt < :threshold', { threshold })
-		.andWhere('file.isLink = FALSE')
-		.andWhere('file.storedInColdStorage = FALSE')
-		.andWhere('file.accessKey IS NOT NULL')
-		// アイコン・バナーは移動しない
-		.andWhere('NOT EXISTS (SELECT 1 FROM "user" WHERE "user"."avatarId" = file.id OR "user"."bannerId" = file.id)')
-		// カスタム絵文字は移動しない
-		.andWhere('NOT EXISTS (SELECT 1 FROM "emoji" WHERE "emoji"."fileId" = file.id OR "emoji"."url" = file.url)')
-		// アクセス頻度が低いとみなせないファイル(最近の投稿の添付)は移動しない
-		.andWhere('NOT EXISTS (SELECT 1 FROM "note" WHERE "note"."id" > :thresholdId AND file.id = ANY("note"."fileIds"))', { thresholdId });
-}
 
 /**
  * ファイルを退避先(コールドストレージ)に移動する
@@ -64,7 +25,7 @@ export async function moveFileToColdStorage(file: DriveFile): Promise<DriveFile>
 	if (file.accessKey == null) throw new Error('the file has no access key');
 
 	const baseUrl = getBaseUrl(cold);
-	const prefix = cold.prefix ? `${cold.prefix}/` : '';
+	const prefix = getKeyPrefix(cold);
 
 	// 移動元の情報 (DB更新後に消すため控えておく)
 	const src = {
@@ -144,7 +105,7 @@ async function copyToColdStorage(fromInternal: boolean, srcKey: string, destKey:
 		Bucket: cold.bucket,
 		Key: destKey,
 		Body: body,
-		ContentType: type === 'image/apng' ? 'image/png' : type,
+		ContentType: normalizeContentType(type),
 		CacheControl: 'max-age=31536000, immutable',
 	} as S3.PutObjectRequest;
 
@@ -171,20 +132,5 @@ async function detectStoredType(fromInternal: boolean, key: string, fallback: st
 	} catch (e) {
 		logger.warn(`cannot detect the type of ${key}: ${e}`);
 		return fallback;
-	}
-}
-
-function detectExt(name: string | null, type: string): string {
-	const [ext] = (name?.match(/\.([a-zA-Z0-9_-]+)$/) || ['']);
-	if (ext !== '') return ext;
-
-	switch (type) {
-		case 'image/jpeg': return '.jpg';
-		case 'image/png': return '.png';
-		case 'image/webp': return '.webp';
-		case 'image/gif': return '.gif';
-		case 'image/apng': return '.apng';
-		case 'image/vnd.mozilla.apng': return '.apng';
-		default: return '';
 	}
 }

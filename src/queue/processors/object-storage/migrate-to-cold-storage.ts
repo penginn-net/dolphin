@@ -1,12 +1,9 @@
 import * as Bull from 'bull';
 
 import { queueLogger } from '../../logger';
-import {
-	createColdStorageTargetQuery,
-	getColdStorageThreshold,
-	isColdStorageConfigured,
-	moveFileToColdStorage
-} from '../../../services/drive/cold-storage';
+import { isColdStorageConfigured } from '../../../services/drive/s3';
+import { createColdStorageTargetQuery, getColdStorageThreshold } from '../../../services/drive/cold-storage-query';
+import { moveFileToColdStorage } from '../../../services/drive/cold-storage';
 
 const logger = queueLogger.createSubLogger('migrate-to-cold-storage');
 
