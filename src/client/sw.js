@@ -56,43 +56,17 @@ self.addEventListener('fetch', ev => {
 self.addEventListener('push', ev => {
 	// クライアント取得
 	ev.waitUntil(self.clients.matchAll({
-		type: 'window',
 		includeUncontrolled: true
 	}).then(clients => {
-		// 表示されているクライアントがあればアプリ内で通知されるので、OSの通知は出さない
-		// (バックグラウンドのタブが開いているだけの場合は通知する)
-		if (clients.some(client => client.visibilityState === 'visible')) return;
+		// クライアントがあったらストリームに接続しているということなので通知しない
+		if (clients.length != 0) return;
 
 		const { type, body } = ev.data.json();
 
 		const n = composeNotification(type, body);
-		if (n == null) return;
-
 		return self.registration.showNotification(n.title, {
 			body: n.body,
 			icon: n.icon,
-			data: { url: n.url },
 		});
-	}));
-});
-
-// 通知がクリックされたとき
-self.addEventListener('notificationclick', ev => {
-	ev.notification.close();
-
-	const url = `${location.origin}${(ev.notification.data && ev.notification.data.url) || '/'}`;
-
-	ev.waitUntil(self.clients.matchAll({
-		type: 'window',
-		includeUncontrolled: true
-	}).then(clients => {
-		// 既に開いているタブがあればそれをフォーカスする
-		for (const client of clients) {
-			if (client.url.startsWith(location.origin) && 'focus' in client) {
-				return client.focus();
-			}
-		}
-
-		return self.clients.openWindow(url);
 	}));
 });
