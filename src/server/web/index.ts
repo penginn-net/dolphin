@@ -62,8 +62,10 @@ router.get('/apple-touch-icon.png', async ctx => {
 });
 
 // ServiceWorker
+// ビルド成果物は assets/sw.js だが、更新時にキャッシュを確実に破棄するため
+// URLにはバージョンを含めている (バージョン部分は何であっても同じものを返す)
 router.get(/^\/sw\.(.+?)\.js$/, async ctx => {
-	await send(ctx as any, `/assets/sw.${ctx.params[0]}.js`, {
+	await send(ctx as any, '/assets/sw.js', {
 		root: client
 	});
 });
