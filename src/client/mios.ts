@@ -224,8 +224,11 @@ export default class MiOS extends EventEmitter {
 		// Reject when not signed in to Dolphin
 		if (!this.store.getters.isSignedIn) return;
 
-		// When service worker activated
-		navigator.serviceWorker.ready.then(registration => {
+		// The path of service worker script
+		const sw = `/sw.${version}.js`;
+
+		// Register service worker
+		navigator.serviceWorker.register(sw).then(() => navigator.serviceWorker.ready).then(registration => {
 			this.swRegistration = registration;
 
 			// Options of pushManager.subscribe
@@ -266,13 +269,12 @@ export default class MiOS extends EventEmitter {
 				const subscription = await this.swRegistration.pushManager.getSubscription();
 				if (subscription) subscription.unsubscribe();
 			});
+		})
+		// Service Workerの登録自体に失敗したとき
+		// (登録に失敗するとプッシュ通知が一切機能しないので、黙って握りつぶさない)
+		.catch(err => {
+			console.error('Failed to register service worker:', err);
 		});
-
-		// The path of service worker script
-		const sw = `/sw.${version}.js`;
-
-		// Register service worker
-		navigator.serviceWorker.register(sw);
 	}
 
 	/**

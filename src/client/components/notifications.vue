@@ -93,10 +93,13 @@ export default Vue.extend({
 
 	methods: {
 		onNotification(notification) {
-			// TODO: ユーザーが画面を見てないと思われるとき(ブラウザやタブがアクティブじゃないなど)は送信しない
-			this.$root.stream.send('readNotification', {
-				id: notification.id
-			});
+			// ユーザーが画面を見ていないときは既読にしない
+			// (既読にするとプッシュ通知が送られなくなってしまう)
+			if (document.visibilityState === 'visible') {
+				this.$root.stream.send('readNotification', {
+					id: notification.id
+				});
+			}
 
 			this.prepend(notification);
 		},
