@@ -262,6 +262,17 @@ _exportOrImport:
   muteList: "Mute list"
   blockingList: "Block list"
   userLists: "Lists"
+_storage:
+  total: "Total"
+  internal: "Internal storage"
+  objectStorage: "Object storage"
+  coldStorage: "Cold storage"
+  local: "Local"
+  remote: "Remote"
+  link: "Direct link (no substance)"
+  migratableDescription: "Files older than {days} days that are not attached to a recent post:"
+  nFiles: "{n} files"
+
 _charts:
   federationInstancesIncDec: "Increase, or decrease in federation"
   federationInstancesTotal: "Federation in total"

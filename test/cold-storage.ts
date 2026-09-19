@@ -12,8 +12,8 @@
  */
 
 import * as assert from 'assert';
-import * as fs from 'fs';
 
+import { DAY, createDriveFile, createUser, genId, hasTestConfig, initTestDb } from './utils';
 import {
 	DEFAULT_OLDER_THAN_DAYS,
 	buildColdStorageTargetConditions,
@@ -24,8 +24,6 @@ import {
 	isColdStorageAvailable,
 	normalizeContentType
 } from '../src/services/drive/cold-storage-util';
-
-const DAY = 24 * 60 * 60 * 1000;
 
 describe('cold storage', () => {
 	describe('isColdStorageAvailable', () => {
@@ -204,91 +202,30 @@ describe('cold storage', () => {
 describe('cold storage target query (DB)', function() {
 	this.timeout(60000);
 
-	let ctx: any = null;
+	let createColdStorageTargetQuery: any = null;
 
 	before(async function() {
-		if (!fs.existsSync(`${__dirname}/../.config/test.yml`)) {
+		if (!hasTestConfig()) {
 			this.skip();
 			return;
 		}
 
-		process.env.NODE_ENV = 'test';
+		await initTestDb();
 
-		const { initDb } = require('../src/db/postgre');
-		await initDb();
-
-		ctx = {
-			models: require('../src/models'),
-			genId: require('../src/misc/gen-id').genId,
-			createColdStorageTargetQuery: require('../src/services/drive/cold-storage-query').createColdStorageTargetQuery,
-		};
-	});
-
-	after(async () => {
-		if (ctx == null) return;
-		const { getConnection } = require('typeorm');
-		await getConnection().close();
+		createColdStorageTargetQuery = require('../src/services/drive/cold-storage-query').createColdStorageTargetQuery;
 	});
 
 	const threshold = () => new Date(Date.now() - (90 * DAY));
 
-	const createFile = async (props: any = {}) => {
-		const { DriveFiles } = ctx.models;
-		const createdAt: Date = props.createdAt || new Date(Date.now() - (365 * DAY));
-		const id = ctx.genId(createdAt);
-
-		return await DriveFiles.save({
-			id,
-			createdAt,
-			userId: null,
-			userHost: null,
-			md5: id.toLowerCase().padEnd(32, '0').slice(0, 32),
-			name: 'lenna.jpg',
-			type: 'image/jpeg',
-			size: 1024,
-			comment: null,
-			properties: {},
-			storedInternal: false,
-			storedInColdStorage: false,
-			url: `https://example.com/files/${id}.jpg`,
-			thumbnailUrl: null,
-			accessKey: `files/${id}.jpg`,
-			thumbnailAccessKey: null,
-			isLink: false,
-			isSensitive: false,
-			ownedBySystem: false,
-			...props,
-		});
-	};
-
-	const createUser = async (props: any = {}) => {
-		const { Users, UserProfiles, UserKeypairs } = ctx.models;
-		const id = ctx.genId();
-
-		const user = await Users.save({
-			id,
-			createdAt: new Date(),
-			username: `u${id}`.slice(0, 20),
-			usernameLower: `u${id}`.slice(0, 20).toLowerCase(),
-			host: null,
-			token: id.slice(0, 16),
-			isAdmin: false,
-			...props,
-		});
-
-		await UserProfiles.save({ userId: user.id, autoAcceptFollowed: false });
-		await UserKeypairs.save({ userId: user.id, publicKey: 'x', privateKey: 'x' });
-
-		return user;
-	};
+	const createFile = createDriveFile;
 
 	const findTargetIds = async () => {
-		const files = await ctx.createColdStorageTargetQuery(threshold()).getMany();
+		const files = await createColdStorageTargetQuery(threshold()).getMany();
 		return files.map((f: any) => f.id);
 	};
 
 	beforeEach(async function() {
-		if (ctx == null) this.skip();
+		if (createColdStorageTargetQuery == null) this.skip();
 	});
 
 	it('古い添付ファイルは退避対象になる', async () => {
@@ -330,11 +267,11 @@ describe('cold storage target query (DB)', function() {
 	});
 
 	it('カスタム絵文字に使われているファイルは退避対象にならない', async () => {
-		const { Emojis } = ctx.models;
+		const { Emojis } = await initTestDb();
 		const file = await createFile();
 
 		await Emojis.save({
-			id: ctx.genId(),
+			id: genId(),
 			updatedAt: new Date(),
 			name: `e${file.id}`.slice(0, 32),
 			host: null,
@@ -348,11 +285,11 @@ describe('cold storage target query (DB)', function() {
 	});
 
 	it('fileIdを持たないカスタム絵文字のファイルも退避対象にならない', async () => {
-		const { Emojis } = ctx.models;
+		const { Emojis } = await initTestDb();
 		const file = await createFile();
 
 		await Emojis.save({
-			id: ctx.genId(),
+			id: genId(),
 			updatedAt: new Date(),
 			name: `l${file.id}`.slice(0, 32),
 			host: null,
@@ -366,13 +303,13 @@ describe('cold storage target query (DB)', function() {
 	});
 
 	it('最近の投稿に添付されているファイルは退避対象にならない', async () => {
-		const { Notes } = ctx.models;
+		const { Notes } = await initTestDb();
 		const file = await createFile();
 		const user = await createUser();
 		const createdAt = new Date(Date.now() - (1 * DAY));
 
 		await Notes.save({
-			id: ctx.genId(createdAt),
+			id: genId(createdAt),
 			createdAt,
 			userId: user.id,
 			userHost: null,
@@ -385,13 +322,13 @@ describe('cold storage target query (DB)', function() {
 	});
 
 	it('古い投稿にのみ添付されているファイルは退避対象になる', async () => {
-		const { Notes } = ctx.models;
+		const { Notes } = await initTestDb();
 		const file = await createFile();
 		const user = await createUser();
 		const createdAt = new Date(Date.now() - (365 * DAY));
 
 		await Notes.save({
-			id: ctx.genId(createdAt),
+			id: genId(createdAt),
 			createdAt,
 			userId: user.id,
 			userHost: null,

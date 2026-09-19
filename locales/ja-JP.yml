@@ -271,6 +271,17 @@ _exportOrImport:
   blockingList: "ブロック"
   userLists: "リスト"
 
+_storage:
+  total: "合計"
+  internal: "内部ストレージ"
+  objectStorage: "オブジェクトストレージ"
+  coldStorage: "退避先"
+  local: "ローカル"
+  remote: "リモート"
+  link: "直リンク(実体なし)"
+  migratableDescription: "{days}日より古く、最近の投稿に添付されていないファイル:"
+  nFiles: "{n}件"
+
 _charts:
   federationInstancesIncDec: "連合の増減"
   federationInstancesTotal: "連合の合計"
