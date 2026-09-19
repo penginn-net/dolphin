@@ -104,6 +104,36 @@ drive:
 #  accessKey: XXX
 #  secretKey: YYY
 
+# Cold storage (退避先) example
+#
+# アクセス頻度が低くなった古い添付ファイルを、別のS3互換APIに移動できます。
+# `admin/drive/migrate-to-cold-storage` を実行すると、
+# `olderThanDays` 日より古く、かつそれ以降の投稿に添付されていないファイルが
+# 退避先に移動されます。
+# アイコン(アバター)・バナー・カスタム絵文字として使われているファイルは移動しません。
+#
+#drive:
+#  storage: 'minio'
+#  bucket: bucket-name
+#  prefix: files
+#  baseUrl: https://bucket-name.<endpoint>
+#  endpoint: <endpoint>
+#  region: <region>
+#  useSSL: true
+#  accessKey: XXX
+#  secretKey: YYY
+#  coldStorage:
+#    bucket: cold-bucket-name
+#    prefix: files
+#    baseUrl: https://cold-bucket-name.<cold-endpoint>
+#    endpoint: <cold-endpoint>
+#    region: <cold-region>
+#    useSSL: true
+#    accessKey: XXX
+#    secretKey: YYY
+#    # 何日より古いファイルを移動するか (デフォルト: 90)
+#    olderThanDays: 90
+
 #   ┌────────────────┐
 #───┘ Service Worker └───────────────────────────────────────────
 

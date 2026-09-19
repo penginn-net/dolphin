@@ -76,6 +76,16 @@ export class DriveFile {
 	@Column('boolean')
 	public storedInternal: boolean;
 
+	/**
+	 * アクセス頻度が低いため、退避先(コールドストレージ)に移動済みか否か
+	 */
+	@Index()
+	@Column('boolean', {
+		default: false,
+		comment: 'Whether the DriveFile is stored in the cold object storage.'
+	})
+	public storedInColdStorage: boolean;
+
 	@Column('varchar', {
 		length: 512,
 		comment: 'The URL of the DriveFile.'

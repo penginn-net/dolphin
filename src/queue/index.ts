@@ -197,9 +197,10 @@ export function createImportUserListsJob(user: ILocalUser, fileId: DriveFile['id
 	});
 }
 
-export function createDeleteObjectStorageFileJob(key: string) {
+export function createDeleteObjectStorageFileJob(key: string, cold = false) {
 	return objectStorageQueue.add('deleteFile', {
-		key: key
+		key: key,
+		cold: cold
 	}, {
 		removeOnComplete: true,
 		removeOnFail: true
@@ -208,6 +209,13 @@ export function createDeleteObjectStorageFileJob(key: string) {
 
 export function createCleanRemoteFilesJob() {
 	return objectStorageQueue.add('cleanRemoteFiles', {}, {
+		removeOnComplete: true,
+		removeOnFail: true
+	});
+}
+
+export function createMigrateToColdStorageJob() {
+	return objectStorageQueue.add('migrateToColdStorage', {}, {
 		removeOnComplete: true,
 		removeOnFail: true
 	});
