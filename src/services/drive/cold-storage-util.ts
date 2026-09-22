@@ -70,6 +70,7 @@ export function normalizeContentType(type: string): string {
  * 退避対象のファイルを絞り込む条件
  *
  * 以下は退避しない:
+ * - ローカルユーザーのファイル
  * - リンク(実体を持たない)ファイル
  * - 既に退避済みのファイル
  * - アイコン(アバター)・バナーとして使われているファイル
@@ -82,6 +83,10 @@ export function normalizeContentType(type: string): string {
 export function buildColdStorageTargetConditions(threshold: Date, thresholdId: string): WhereCondition[] {
 	return [
 		{ sql: 'file.createdAt < :threshold', params: { threshold } },
+		// ローカルユーザーのファイルは移動しない
+		// 退避するとURLが変わるが、ActivityPubで配信済みの投稿は古いURLを
+		// 参照したままなので、リモートから添付ファイルが見えなくなる
+		{ sql: 'file.userHost IS NOT NULL', params: {} },
 		{ sql: 'file.isLink = FALSE', params: {} },
 		{ sql: 'file.storedInColdStorage = FALSE', params: {} },
 		{ sql: 'file.accessKey IS NOT NULL', params: {} },

@@ -161,6 +161,11 @@ describe('cold storage', () => {
 			assert.strictEqual(condition!.params.threshold, threshold);
 		});
 
+		it('ローカルユーザーのファイルを除外する', () => {
+			// 退避するとURLが変わり、配信済みの投稿からリモートが参照できなくなる
+			assert.ok(sql.includes('file.userHost IS NOT NULL'));
+		});
+
 		it('リンクファイルと退避済みファイルを除外する', () => {
 			assert.ok(sql.includes('file.isLink = FALSE'));
 			assert.ok(sql.includes('file.storedInColdStorage = FALSE'));
@@ -292,38 +297,45 @@ describe('cold storage target query (DB)', function() {
 	});
 
 	it('古い添付ファイルは退避対象になる', async () => {
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 
 		assert.ok((await findTargetIds()).includes(file.id));
 	});
 
+	it('ローカルユーザーのファイルは退避対象にならない', async () => {
+		// 退避するとURLが変わり、ActivityPubで配信済みの投稿から参照できなくなる
+		const file = await createFile({ userHost: null });
+
+		assert.ok(!(await findTargetIds()).includes(file.id));
+	});
+
 	it('新しいファイルは退避対象にならない', async () => {
-		const file = await createFile({ createdAt: new Date(Date.now() - (1 * DAY)) });
+		const file = await createFile({ userHost: 'remote.example.com', createdAt: new Date(Date.now() - (1 * DAY)) });
 
 		assert.ok(!(await findTargetIds()).includes(file.id));
 	});
 
 	it('退避済みのファイルは退避対象にならない', async () => {
-		const file = await createFile({ storedInColdStorage: true });
+		const file = await createFile({ userHost: 'remote.example.com', storedInColdStorage: true });
 
 		assert.ok(!(await findTargetIds()).includes(file.id));
 	});
 
 	it('リンクファイルは退避対象にならない', async () => {
-		const file = await createFile({ isLink: true, accessKey: null, size: 0 });
+		const file = await createFile({ userHost: 'remote.example.com', isLink: true, accessKey: null, size: 0 });
 
 		assert.ok(!(await findTargetIds()).includes(file.id));
 	});
 
 	it('アイコンに使われているファイルは退避対象にならない', async () => {
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 		await createUser({ avatarId: file.id });
 
 		assert.ok(!(await findTargetIds()).includes(file.id));
 	});
 
 	it('バナーに使われているファイルは退避対象にならない', async () => {
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 		await createUser({ bannerId: file.id });
 
 		assert.ok(!(await findTargetIds()).includes(file.id));
@@ -331,7 +343,7 @@ describe('cold storage target query (DB)', function() {
 
 	it('カスタム絵文字に使われているファイルは退避対象にならない', async () => {
 		const { Emojis } = ctx.models;
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 
 		await Emojis.save({
 			id: ctx.genId(),
@@ -349,7 +361,7 @@ describe('cold storage target query (DB)', function() {
 
 	it('fileIdを持たないカスタム絵文字のファイルも退避対象にならない', async () => {
 		const { Emojis } = ctx.models;
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 
 		await Emojis.save({
 			id: ctx.genId(),
@@ -367,7 +379,7 @@ describe('cold storage target query (DB)', function() {
 
 	it('最近の投稿に添付されているファイルは退避対象にならない', async () => {
 		const { Notes } = ctx.models;
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 		const user = await createUser();
 		const createdAt = new Date(Date.now() - (1 * DAY));
 
@@ -386,7 +398,7 @@ describe('cold storage target query (DB)', function() {
 
 	it('古い投稿にのみ添付されているファイルは退避対象になる', async () => {
 		const { Notes } = ctx.models;
-		const file = await createFile();
+		const file = await createFile({ userHost: 'remote.example.com' });
 		const user = await createUser();
 		const createdAt = new Date(Date.now() - (365 * DAY));
 
