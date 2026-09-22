@@ -1,5 +1,4 @@
 import * as fileType from 'file-type';
-import { v4 as uuid } from 'uuid';
 import * as S3 from 'aws-sdk/clients/s3';
 
 import config from '../../config';
@@ -10,7 +9,7 @@ import { createDeleteObjectStorageFileJob } from '../../queue';
 import { InternalStorage } from './internal-storage';
 import { driveLogger } from './logger';
 import { getColdS3, getColdStorageConfig, getS3 } from './s3';
-import { detectExt, getBaseUrl, getKeyPrefix, normalizeContentType } from './cold-storage-util';
+import { getBaseUrl, getKeyPrefix, getObjectName, isSameBucket, normalizeContentType } from './cold-storage-util';
 
 const logger = driveLogger.createSubLogger('cold-storage', 'cyan');
 
@@ -24,6 +23,11 @@ export async function moveFileToColdStorage(file: DriveFile): Promise<DriveFile>
 	if (file.storedInColdStorage) return file;
 	if (file.accessKey == null) throw new Error('the file has no access key');
 
+	// キーを維持するので、退避元と退避先が同じバケットだと自分自身を上書きして消してしまう
+	if (!file.storedInternal && isSameBucket(config.drive, cold)) {
+		throw new Error('the cold storage points at the same bucket as the normal one');
+	}
+
 	const baseUrl = getBaseUrl(cold);
 	const prefix = getKeyPrefix(cold);
 
@@ -35,7 +39,9 @@ export async function moveFileToColdStorage(file: DriveFile): Promise<DriveFile>
 	};
 
 	//#region original
-	const key = `${prefix}${uuid()}${detectExt(file.name, file.type)}`;
+	// ActivityPubで配信済みの投稿から参照できるよう、キーは変えない
+	// (退避先を同じドメインで配信すればURLも変わらない)
+	const key = `${prefix}${getObjectName(file.accessKey)}`;
 
 	logger.info(`moving original to cold storage: ${file.accessKey} -> ${key}`);
 	await copyToColdStorage(src.storedInternal, file.accessKey, key, file.type, file.name);
@@ -47,7 +53,7 @@ export async function moveFileToColdStorage(file: DriveFile): Promise<DriveFile>
 
 	if (src.thumbnailAccessKey) {
 		const thumbnailType = await detectStoredType(src.storedInternal, src.thumbnailAccessKey, 'image/jpeg');
-		thumbnailKey = `${prefix}thumbnail-${uuid()}${detectExt(null, thumbnailType)}`;
+		thumbnailKey = `${prefix}${getObjectName(src.thumbnailAccessKey)}`;
 		thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
 
 		logger.info(`moving thumbnail to cold storage: ${src.thumbnailAccessKey} -> ${thumbnailKey}`);

@@ -41,6 +41,27 @@ export function getKeyPrefix(conf: ObjectStorage): string {
 }
 
 /**
+ * オブジェクトキーからprefixを除いた部分を取り出す
+ *
+ * 保存先を移してもURLの見た目が変わらないよう、キーは保存先をまたいで維持する
+ */
+export function getObjectName(key: string): string {
+	return key.slice(key.lastIndexOf('/') + 1);
+}
+
+/**
+ * 2つの保存先が同じバケットを指しているか
+ *
+ * 同じバケットにキーを維持したまま「移動」すると、自分自身に上書きしてから
+ * 消すことになりファイルが失われるので、呼び出し側で弾くために使う
+ */
+export function isSameBucket(a: ObjectStorage, b: ObjectStorage): boolean {
+	return a.bucket === b.bucket
+		&& (a.endpoint ?? null) === (b.endpoint ?? null)
+		&& getKeyPrefix(a) === getKeyPrefix(b);
+}
+
+/**
  * オブジェクトキーに付ける拡張子を決める
  */
 export function detectExt(name: string | null, type: string): string {

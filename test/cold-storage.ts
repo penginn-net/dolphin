@@ -21,7 +21,9 @@ import {
 	detectExt,
 	getBaseUrl,
 	getKeyPrefix,
+	getObjectName,
 	isColdStorageAvailable,
+	isSameBucket,
 	normalizeContentType
 } from '../src/services/drive/cold-storage-util';
 
@@ -105,6 +107,54 @@ describe('cold storage', () => {
 
 		it('prefixがあれば区切りのスラッシュを付ける', () => {
 			assert.strictEqual(getKeyPrefix({ bucket: 'cold', prefix: 'files' }), 'files/');
+		});
+	});
+
+	describe('getObjectName', () => {
+		// 保存先を移してもURLが変わらないよう、キーはprefixを除いて維持する
+		it('prefixを除いた部分を返す', () => {
+			assert.strictEqual(getObjectName('files/abc.jpg'), 'abc.jpg');
+			assert.strictEqual(getObjectName('a/b/c/abc.jpg'), 'abc.jpg');
+		});
+
+		it('prefixが無ければそのまま返す', () => {
+			assert.strictEqual(getObjectName('abc.jpg'), 'abc.jpg');
+			// 内部ストレージのキーは拡張子を持たない
+			assert.strictEqual(getObjectName('550e8400-e29b-41d4-a716-446655440000'), '550e8400-e29b-41d4-a716-446655440000');
+		});
+
+		it('prefixを付け直すと元のキーに戻る', () => {
+			const conf = { bucket: 'b', prefix: 'files' };
+			const key = 'files/abc.jpg';
+
+			assert.strictEqual(`${getKeyPrefix(conf)}${getObjectName(key)}`, key);
+		});
+	});
+
+	describe('isSameBucket', () => {
+		// 同じバケットにキーを維持したまま移すと、自分自身を上書きして消してしまう
+		it('bucketとendpointとprefixが同じなら同じとみなす', () => {
+			assert.strictEqual(
+				isSameBucket({ bucket: 'b', endpoint: 'e', prefix: 'files' }, { bucket: 'b', endpoint: 'e', prefix: 'files' }),
+				true);
+		});
+
+		it('bucketが違えば別', () => {
+			assert.strictEqual(
+				isSameBucket({ bucket: 'b', endpoint: 'e' }, { bucket: 'c', endpoint: 'e' }),
+				false);
+		});
+
+		it('endpointが違えば別', () => {
+			assert.strictEqual(
+				isSameBucket({ bucket: 'b', endpoint: 'e' }, { bucket: 'b', endpoint: 'f' }),
+				false);
+		});
+
+		it('prefixが違えば別', () => {
+			assert.strictEqual(
+				isSameBucket({ bucket: 'b', endpoint: 'e', prefix: 'hot' }, { bucket: 'b', endpoint: 'e', prefix: 'cold' }),
+				false);
 		});
 	});
 
